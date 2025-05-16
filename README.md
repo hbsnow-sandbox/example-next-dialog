@@ -1,1 +1,1 @@
-# example-next-dialog
+# Example Next Dialog
