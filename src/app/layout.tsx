@@ -13,8 +13,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  dialog,
 }: {
   children: React.ReactNode;
+  dialog: React.ReactNode;
 }) {
   return (
     <html lang="ja">
@@ -45,6 +47,7 @@ export default function RootLayout({
               <p>シンプルストア</p>
             </div>
           </footer>
+          {dialog}
         </div>
       </body>
     </html>
