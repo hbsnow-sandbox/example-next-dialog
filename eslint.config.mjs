@@ -3,7 +3,6 @@ import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
 import perfectionist from "eslint-plugin-perfectionist";
-import reactRefresh from "eslint-plugin-react-refresh";
 import unicorn from "eslint-plugin-unicorn";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -94,20 +93,6 @@ export default tseslint.config(
         "error",
         {
           namedComponents: "function-declaration",
-        },
-      ],
-    },
-  },
-  {
-    plugins: {
-      "react-refresh": reactRefresh,
-    },
-    rules: {
-      "react-refresh/only-export-components": [
-        "warn",
-        {
-          allowConstantExport: true,
-          allowExportNames: ["metadata", "generateMetadata"],
         },
       ],
     },
