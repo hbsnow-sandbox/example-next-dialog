@@ -1,6 +1,8 @@
 import ProductCard from "@/features/products/components/product-card";
 import { products } from "@/features/products/data";
 
+import { ProductDialog } from "./_components/dialog";
+
 export default function Home() {
   return (
     <>
@@ -11,6 +13,8 @@ export default function Home() {
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
+
+      <ProductDialog />
     </>
   );
 }

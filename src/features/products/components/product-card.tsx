@@ -1,11 +1,20 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import type { Product } from "../data";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const router = useRouter();
+
   return (
-    <Link href={`/products/${product.id}`} className="group">
+    <button
+      onClick={() => {
+        router.push(`/?id=${product.id}`);
+      }}
+      className="group cursor-pointer"
+    >
       <div className="overflow-hidden rounded-lg border transition-all hover:shadow-md">
         <div className="flex items-center justify-center bg-gray-50 p-4">
           <Image
@@ -26,6 +35,6 @@ export default function ProductCard({ product }: { product: Product }) {
           <p className="mt-2 font-bold">¥{product.price.toLocaleString()}</p>
         </div>
       </div>
-    </Link>
+    </button>
   );
 }
