@@ -16,89 +16,137 @@ import type { CheckboxItem } from "./use-tree-state";
 import { sampleData } from "./_data";
 import { useTreeState } from "./use-tree-state";
 
-// 汎用的なTreeComponentを作成
 function TreeComponent({
-  title,
   items,
-  toggleCheck,
-  toggleExpand,
+  onCheckedChange,
+  defaultChecked,
+  defaultExpanded,
 }: {
-  title: string;
   items: CheckboxItem[];
-  toggleCheck: (path: number[], checked: boolean) => void;
-  toggleExpand: (path: number[], expanded: boolean) => void;
+  onCheckedChange?: (value: string) => void;
+  defaultChecked?: string[];
+  defaultExpanded?: string[];
 }) {
-  return (
-    <div className="space-y-4 rounded-lg border p-4">
-      <h2 className="mb-4 text-lg font-semibold">{title}</h2>
+  const {
+    items: treeItems,
+    toggleCheck,
+    toggleExpand,
+    isChecked,
+    isExpanded,
+    getChildren,
+  } = useTreeState(items, {
+    defaultChecked,
+    defaultExpanded,
+  });
 
-      <div className="space-y-2 rounded-lg border bg-gray-50 p-4">
-        {items.map((item, index) => (
-          <NestedCheckboxItem
-            key={item.id}
-            item={item}
-            level={0}
-            path={[index]}
-            onToggleCheck={toggleCheck}
-            onToggleExpand={toggleExpand}
-          />
-        ))}
-      </div>
+  // レベルマップを構築（各アイテムのレベルを記録）
+  // const levelMap = useMemo(() => {
+  //   const map = new Map<string, number>();
+
+  //   const traverse = (items: CheckboxItem[], level: number) => {
+  //     for (const item of items) {
+  //       map.set(item.id, level);
+  //       if (item.children) {
+  //         traverse(item.children, level + 1);
+  //       }
+  //     }
+  //   };
+
+  //   traverse(treeItems, 0);
+  //   return map;
+  // }, [treeItems]);
+
+  const handleToggleCheck = (id: string) => {
+    toggleCheck(id);
+
+    if (onCheckedChange) {
+      // const level = levelMap.get(id) ?? 0;
+      onCheckedChange(id);
+    }
+  };
+
+  return (
+    <div>
+      {treeItems.map((item) => (
+        <NestedCheckboxItem
+          key={item.id}
+          item={item}
+          level={0}
+          toggleCheck={handleToggleCheck}
+          toggleExpand={toggleExpand}
+          isChecked={isChecked}
+          isExpanded={isExpanded}
+          getChildren={getChildren}
+        />
+      ))}
     </div>
   );
 }
 
-// NestedCheckboxItemコンポーネント
 function NestedCheckboxItem({
   item,
   level,
-  path,
-  onToggleCheck,
-  onToggleExpand,
+  toggleCheck,
+  toggleExpand,
+  isChecked,
+  isExpanded,
+  getChildren,
 }: {
   item: CheckboxItem;
   level: number;
-  path: number[];
-  onToggleCheck: (path: number[], checked: boolean) => void;
-  onToggleExpand: (path: number[], expanded: boolean) => void;
+  toggleCheck: (id: string) => void;
+  toggleExpand: (id: string) => void;
+  isChecked: (id: string) => boolean;
+  isExpanded: (id: string) => boolean;
+  getChildren: (id: string) => Set<string>;
 }) {
-  const hasChildren = !!item.children && item.children.length > 0;
-  const isExpanded = item.expanded ?? false;
-  const isChecked = item.checked ?? false;
+  const hasChildren = useMemo(
+    () => !!item.children && item.children.length > 0,
+    [item.children],
+  );
+  const itemIsExpanded = isExpanded(item.id);
+  const itemIsChecked = isChecked(item.id);
 
-  // 子要素のチェック状態を計算
   const childrenCheckState = useMemo(() => {
     if (!hasChildren) {
       return { allChecked: false, someChecked: false };
     }
 
-    const childrenChecked =
-      item.children?.map((child) => child.checked ?? false) ?? [];
-    const allChecked = childrenChecked.every(Boolean);
+    const childrenIds = [...getChildren(item.id)];
+    const childrenChecked = childrenIds.map((id) => isChecked(id));
+    const allChecked =
+      childrenChecked.length > 0 && childrenChecked.every(Boolean);
     const someChecked = childrenChecked.some(Boolean);
 
     return { allChecked, someChecked };
-  }, [hasChildren, item.children]);
+  }, [hasChildren, item.id, getChildren, isChecked]);
 
-  const handleCheckboxChange = (checked: boolean) => {
-    onToggleCheck(path, checked);
+  const handleCheckboxChange = () => {
+    toggleCheck(item.id);
   };
 
   const handleExpandedChange = () => {
-    onToggleExpand(path, !isExpanded);
+    toggleExpand(item.id);
   };
 
   return (
     <div className={cn("ml-4", level === 0 && "ml-0")}>
       <div className="flex items-center space-x-2 py-1">
         {hasChildren ? (
-          <Collapsible open={isExpanded} onOpenChange={handleExpandedChange}>
+          <Collapsible
+            open={itemIsExpanded}
+            onOpenChange={handleExpandedChange}
+          >
             <CollapsibleTrigger asChild>
-              <button className="hover:bg-muted flex items-center space-x-2 rounded p-1">
+              <button
+                className="hover:bg-muted flex items-center space-x-2 rounded p-1"
+                aria-label={`${itemIsExpanded ? "折りたたむ" : "展開する"}: ${item.label}`}
+                aria-expanded={itemIsExpanded}
+              >
                 <ChevronRight
                   className={cn(
                     "h-4 w-4 transition-transform",
-                    isExpanded && "rotate-90",
+                    itemIsExpanded && "rotate-90",
                   )}
                 />
               </button>
@@ -108,37 +156,35 @@ function NestedCheckboxItem({
           <div className="w-6" />
         )}
 
-        <Checkbox
-          id={item.id}
-          checked={hasChildren ? childrenCheckState.allChecked : isChecked}
-          onCheckedChange={handleCheckboxChange}
-          className={cn(
-            hasChildren &&
-              childrenCheckState.someChecked &&
-              !childrenCheckState.allChecked &&
-              "data-[state=checked]:bg-muted-foreground",
-          )}
-        />
-
         <label
           htmlFor={item.id}
-          className="cursor-pointer text-sm font-medium leading-none"
+          className="flex cursor-pointer items-center gap-2"
         >
+          <Checkbox
+            id={item.id}
+            checked={
+              hasChildren ? childrenCheckState.allChecked : itemIsChecked
+            }
+            onCheckedChange={handleCheckboxChange}
+            // Checkboxコンポーネント自体のonCheckedChangeは使わず、labelのonClickで制御
+          />
           {item.label}
         </label>
       </div>
 
       {hasChildren && (
-        <Collapsible open={isExpanded}>
+        <Collapsible open={itemIsExpanded}>
           <CollapsibleContent className="ml-2">
-            {item.children?.map((child, index) => (
+            {item.children?.map((child) => (
               <NestedCheckboxItem
                 key={child.id}
                 item={child}
                 level={level + 1}
-                path={[...path, index]}
-                onToggleCheck={onToggleCheck}
-                onToggleExpand={onToggleExpand}
+                toggleCheck={toggleCheck}
+                toggleExpand={toggleExpand}
+                isChecked={isChecked}
+                isExpanded={isExpanded}
+                getChildren={getChildren}
               />
             ))}
           </CollapsibleContent>
@@ -148,22 +194,23 @@ function NestedCheckboxItem({
   );
 }
 
-// メインアプリケーション
 export function MultiTreeApp() {
-  const skillsTree = useTreeState(sampleData, {
-    defaultExpanded: ["frontend", "backend"],
-  });
-
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <TreeComponent title="スキル選択" {...skillsTree} />
-      </div>
+    <div className="container mx-auto p-6">
+      <TreeComponent
+        items={sampleData}
+        onCheckedChange={(value) => {
+          console.log(`Item "${value}"`);
+        }}
+        defaultExpanded={["frontend", "backend"]}
+        defaultChecked={["astro"]}
+      />
 
-      <div className="rounded-lg bg-gray-100 p-6">
-        <h2 className="mb-4 text-lg font-semibold">選択結果サマリー</h2>
-
-        <pre className="text-sm">{JSON.stringify(skillsTree, null, 2)}</pre>
+      <div className="mt-6 space-y-2 text-xs">
+        <strong>Sample Data:</strong>
+        <pre className="mt-1 rounded bg-gray-50 p-2">
+          {JSON.stringify(sampleData, null, 2)}
+        </pre>
       </div>
     </div>
   );
