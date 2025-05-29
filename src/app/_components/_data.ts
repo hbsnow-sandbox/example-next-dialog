@@ -1,6 +1,6 @@
-import type { CheckboxItem } from "./use-tree-state";
+import type { TreeNode } from "./types";
 
-export const sampleData: CheckboxItem[] = [
+export const sampleData: TreeNode[] = [
   {
     id: "frontend",
     label: "フロントエンド",
@@ -9,6 +9,7 @@ export const sampleData: CheckboxItem[] = [
         id: "react",
         label: "React",
         children: [
+          { id: "react", label: "React" },
           { id: "nextjs", label: "Next.js" },
           { id: "astro", label: "Astro" },
         ],
